@@ -42,9 +42,17 @@ on:
   pull_request:
 
 jobs:
+  get-tag:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request }}
+    outputs:
+      tag: ${{ github.ref_name }}
+      tag-flag: --tag=${{ github.ref_name }}
+
   plan:
     # run cargo dist plan to figure out what we're doing
     runs-on: ubuntu-latest
+    needs: get-tag
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
     env:
@@ -57,7 +65,7 @@ jobs:
         run: "cargo install --git https://github.com/axodotdev/cargo-dist/ --branch=ci-plus cargo-dist"
       - id: plan
         run: |
-          cargo dist plan --tag=${{ github.ref_name }} --output-format=json > dist-manifest.json
+          cargo dist plan ${{ needs.get-tag.outputs.tag-flag }} --output-format=json > dist-manifest.json
           echo "cargo dist plan ran successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
@@ -69,7 +77,9 @@ jobs:
 
   upload-dist-artifacts:
     # Build and packages all the things
-    needs: plan
+    needs:
+      - get-tag
+      - plan
     # Let the initial task tell us to not run (currently very blunt)
     if: ${{ fromJson(needs.plan.outputs.val).releases != null }}
     strategy:
@@ -103,7 +113,7 @@ jobs:
         shell: bash
         run: |
           # Actually do builds and make zips and whatnot
-          cargo dist build --tag=${{ github.ref_name }} --output-format=json ${{ matrix.dist-args }} > dist-manifest.json
+          cargo dist build ${{ needs.get-tag.outputs.tag-flag }} --output-format=json ${{ matrix.dist-args }} > dist-manifest.json
           echo "cargo dist ran successfully"
 
           # Parse out what we just built and upload it to the Github Release™
@@ -116,13 +126,20 @@ jobs:
           name: artifacts
           path: ${{ steps.cargo-dist.outputs.paths }}
 
+  should-publish:
+    needs:
+      - get-tag
+      - plan
+      - upload-dist-artifacts
+    runs-on: ubuntu-latest
+
   publish-release:
     # Create a Github Release with all the results once everything is done,
     # regardless of success. The release is only marked as non-draft if all tasks succeeded.
-    needs:
+    needs: 
+      - should-publish
+      - get-tag
       - plan
-      - upload-dist-artifacts
-    if: ${{ always() && !github.event.pull_request }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -135,13 +152,10 @@ jobs:
         with:
           name: artifacts
           path: artifacts
-      - name: "debug"
-        run: |
-          echo "${{ github.action_status }}"
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ github.ref }}
+          tag: ${{ needs.get-tag.outputs.tag }}
           name: ${{ fromJson(needs.plan.outputs.val).announcement_title }}
           body: ${{ fromJson(needs.plan.outputs.val).announcement_github_body }}
           draft: ${{ github.action_status != 'success' }}
