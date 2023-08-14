@@ -56,6 +56,7 @@ jobs:
     # run cargo dist plan to figure out what we're doing
     runs-on: ubuntu-latest
     needs: get-tag
+    if: !cancelled() && needs.get-tag.result != 'failure'
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
     env:
@@ -83,8 +84,7 @@ jobs:
     needs:
       - get-tag
       - plan
-    # Let the initial task tell us to not run (currently very blunt)
-    if: ${{ fromJson(needs.plan.outputs.val).releases != null }}
+    if: !cancelled() && needs.get-tag.result != 'failure' && needs.plan.result != 'failure' && fromJson(needs.plan.outputs.val).releases != null
     strategy:
       fail-fast: false
       # Target platforms/runners are computed by cargo-dist in create-release.
@@ -143,9 +143,9 @@ jobs:
     # Create a Github Release with all the results once everything is done,
     # regardless of success. The release is only marked as non-draft if all tasks succeeded.
     needs: 
-      - should-publish
       - get-tag
       - plan
+      - should-publish
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
