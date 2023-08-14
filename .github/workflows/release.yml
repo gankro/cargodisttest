@@ -48,6 +48,9 @@ jobs:
     outputs:
       tag: ${{ github.ref_name }}
       tag-flag: --tag=${{ github.ref_name }}
+    steps:
+      - name: print tag
+        run: echo "tag is ${{ github.ref_name }}"
 
   plan:
     # run cargo dist plan to figure out what we're doing
@@ -132,6 +135,9 @@ jobs:
       - plan
       - upload-dist-artifacts
     runs-on: ubuntu-latest
+    steps:
+      - name: print tag
+        run: echo "ok we're publishing!"
 
   publish-release:
     # Create a Github Release with all the results once everything is done,
