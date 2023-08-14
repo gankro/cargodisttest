@@ -56,7 +56,7 @@ jobs:
     # run cargo dist plan to figure out what we're doing
     runs-on: ubuntu-latest
     needs: get-tag
-    if: !cancelled() && needs.get-tag.result != 'failure'
+    if: ${{ !cancelled() && needs.get-tag.result != 'failure' }}
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
     env:
@@ -84,7 +84,7 @@ jobs:
     needs:
       - get-tag
       - plan
-    if: !cancelled() && needs.get-tag.result != 'failure' && needs.plan.result != 'failure' && fromJson(needs.plan.outputs.val).releases != null
+    if: ${{ !cancelled() && needs.get-tag.result != 'failure' && needs.plan.result != 'failure' && fromJson(needs.plan.outputs.val).releases != null }}
     strategy:
       fail-fast: false
       # Target platforms/runners are computed by cargo-dist in create-release.
