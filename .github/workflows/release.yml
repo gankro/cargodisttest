@@ -127,7 +127,7 @@ jobs:
           echo "uploading..."
           cat uploads.txt
           gh release upload ${{ github.ref_name }} $(cat uploads.txt)
-          echo "uploaded!" 
+          echo "uploaded!"
   # Build and packages all the platform-agnostic(ish) things
   upload-global-artifacts:
     needs: upload-local-artifacts
@@ -143,7 +143,7 @@ jobs:
       # Get all the local artifacts for the global tasks to use
       - name: Fetch local artifacts
         run: |
-          gh release download ${{ github.ref_name }} target/distrib/
+          gh release download ${{ github.ref_name }} --dir target/distrib/
       - name: Run cargo-dist
         # This logic is a bit janky because it's trying to be a polyglot between
         # powershell and bash since this will run on windows, macos, and linux!
@@ -159,7 +159,7 @@ jobs:
           echo "uploading..."
           cat uploads.txt
           gh release upload ${{ github.ref_name }} $(cat uploads.txt)
-          echo "uploaded!" 
+          echo "uploaded!"
 
   # Mark the Github Release™ as a non-draft now that everything has succeeded!
   publish-release:
