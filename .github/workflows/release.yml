@@ -133,7 +133,9 @@ jobs:
         run: |
           cargo install cargo-wix
           cargo wix init
-          cargo wix
+          cargo wix -o target/distrib/cargodisttest.mdi
+          # cargo wix sign -i target/distrib/cargodisttest.msi
+          gh release upload ${{ github.ref_name }} target/distrib/cargodisttest.msi
 
   # Build and packages all the platform-agnostic(ish) things
   upload-global-artifacts:
