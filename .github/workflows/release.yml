@@ -4,12 +4,17 @@
 # CI that:
 #
 # * checks for a Git Tag that looks like a release
-# * builds artifacts with cargo-dist (binaries and installers)
-# * creates a Github Release™ and with those artifacts
+# * creates a Github Release™ and fills in its text
+# * builds artifacts with cargo-dist (executable-zips, installers)
+# * uploads those artifacts to the Github Release™
 #
-# Note that if any artifact tasks fails, the Github Release™ will still be created
-# with as many values as possible, but will be marked as a "draft" so that you can
-# inspect it and decide what to do.
+# Note that the Github Release™ will be created before the artifacts,
+# so there will be a few minutes where the release has no artifacts
+# and then they will slowly trickle in, possibly failing. To make
+# this more pleasant we mark the release as a "draft" until all
+# artifacts have been successfully uploaded. This allows you to
+# choose what to do with partial successes and avoids spamming
+# anyone with notifications before the release is actually ready.
 name: Release
 
 permissions:
@@ -30,8 +35,7 @@ permissions:
 # packages versioned/released in lockstep).
 #
 # If you push multiple tags at once, separate instances of this workflow will
-# spin up, creating an independent Github Release™ for each one (unfortunately
-# github will drop some tags on the ground if you push more than 3 at once).
+# spin up, creating an independent Github Release™ for each one.
 #
 # If there's a prerelease-style suffix to the version then the Github Release™
 # will be marked as a prerelease.
@@ -39,26 +43,13 @@ on:
   push:
     tags:
       - '*-?v[0-9]+*'
-  pull_request:
 
 jobs:
-  get-tag:
+  # Create the Github Release™ so the packages have something to be uploaded to
+  create-release:
     runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request }}
     outputs:
-      tag: ${{ github.ref_name }}
-      tag-flag: --tag=${{ github.ref_name }}
-    steps:
-      - name: print tag
-        run: echo "tag is ${{ github.ref_name }}"
-
-  plan:
-    # run cargo dist plan to figure out what we're doing
-    runs-on: ubuntu-latest
-    needs: get-tag
-    if: ${{ !cancelled() && needs.get-tag.result != 'failure' }}
-    outputs:
-      val: ${{ steps.plan.outputs.manifest }}
+      has-releases: ${{ steps.create-release.outputs.has-releases }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -66,86 +57,115 @@ jobs:
         with:
           submodules: recursive
       - name: Install cargo-dist
-        run: "cargo install --git https://github.com/axodotdev/cargo-dist/ --branch=ci-plus cargo-dist"
-      - id: plan
+        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+      - id: create-release
         run: |
-          cargo dist plan ${{ needs.get-tag.outputs.tag-flag }} --output-format=json > dist-manifest.json
-          echo "cargo dist plan ran successfully"
+          cargo dist plan --tag=${{ github.ref_name }} --output-format=json > dist-manifest.json
+          echo "dist plan ran successfully"
           cat dist-manifest.json
-          echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
-      - name: "Upload dist-manifest.json"
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts
-          path: dist-manifest.json
 
-  upload-dist-artifacts:
-    # Build and packages all the things
-    needs:
-      - get-tag
-      - plan
-    if: ${{ !cancelled() && needs.get-tag.result != 'failure' && needs.plan.result != 'failure' && fromJson(needs.plan.outputs.val).releases != null }}
+          # Create the Github Release™ based on what cargo-dist thinks it should be
+          ANNOUNCEMENT_TITLE=$(jq --raw-output ".announcement_title" dist-manifest.json)
+          IS_PRERELEASE=$(jq --raw-output ".announcement_is_prerelease" dist-manifest.json)
+          jq --raw-output ".announcement_github_body" dist-manifest.json > new_dist_announcement.md
+          gh release create ${{ github.ref_name }} --draft --prerelease="$IS_PRERELEASE" --title="$ANNOUNCEMENT_TITLE" --notes-file=new_dist_announcement.md
+          echo "created announcement!"
+
+          # Upload the manifest to the Github Release™
+          gh release upload ${{ github.ref_name }} dist-manifest.json
+          echo "uploaded manifest!"
+
+          # Disable all the upload-artifacts tasks if we have no actual releases
+          HAS_RELEASES=$(jq --raw-output ".releases != null" dist-manifest.json)
+          echo "has-releases=$HAS_RELEASES" >> "$GITHUB_OUTPUT"
+
+  # Build and packages all the platform-specific things
+  upload-local-artifacts:
+    # Let the initial task tell us to not run (currently very blunt)
+    needs: create-release
+    if: ${{ needs.create-release.outputs.has-releases == 'true' }}
     strategy:
       fail-fast: false
-      # Target platforms/runners are computed by cargo-dist in create-release.
-      # Each member of the matrix has the following arguments:
-      #
-      # - runner: the github runner
-      # - dist-args: cli flags to pass to cargo dist
-      # - install-dist: expression to run to install cargo-dist on the runner
-      #
-      # Typically there will be:
-      # - 1 "global" task that builds universal installers
-      # - N "local" tasks that build each platform's binaries and platform-specific installers
-      matrix: ${{ fromJson(needs.plan.outputs.val).ci.github.artifacts-matrix }}
-    runs-on: ${{ matrix.runner }}
+      matrix:
+        # For these target platforms
+        include:
+        - os: "macos-11"
+          dist-args: "--artifacts=local --target=aarch64-apple-darwin"
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+        - os: "macos-11"
+          dist-args: "--artifacts=local --target=x86_64-apple-darwin"
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+        - os: "windows-2019"
+          dist-args: "--artifacts=local --target=x86_64-pc-windows-msvc"
+          install-dist: "irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.ps1 | iex"
+        - os: "ubuntu-20.04"
+          dist-args: "--artifacts=local --target=x86_64-unknown-linux-gnu"
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+
+    runs-on: ${{ matrix.os }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: swatinem/rust-cache@v2
       - name: Install cargo-dist
         run: ${{ matrix.install-dist }}
-      - id: cargo-dist
-        # We force bash here just because github makes it really hard to get values up
-        # to "real" actions without writing to env-vars, and writing to env-vars has
-        # inconsistent syntax between shell and powershell. cargo-dist and jq work fine
-        # in powershell.
-        shell: bash
+      - name: Run cargo-dist
+        # This logic is a bit janky because it's trying to be a polyglot between
+        # powershell and bash since this will run on windows, macos, and linux!
+        # The two platforms don't agree on how to talk about env vars but they
+        # do agree on 'cat' and '$()' so we use that to marshal values between commands.
         run: |
           # Actually do builds and make zips and whatnot
-          cargo dist build ${{ needs.get-tag.outputs.tag-flag }} --output-format=json ${{ matrix.dist-args }} > dist-manifest.json
-          echo "cargo dist ran successfully"
+          cargo dist build --tag=${{ github.ref_name }} --output-format=json ${{ matrix.dist-args }} > dist-manifest.json
+          echo "dist ran successfully"
+          cat dist-manifest.json
 
           # Parse out what we just built and upload it to the Github Release™
-          echo "paths<<EOF" >> "$GITHUB_OUTPUT"
-          jq --raw-output ".artifacts[]?.path | select( . != null )" dist-manifest.json >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-      - name: "Upload artifacts"
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ steps.cargo-dist.outputs.paths }}
-
-  should-publish:
-    needs:
-      - get-tag
-      - plan
-      - upload-dist-artifacts
-    runs-on: ubuntu-latest
+          jq --raw-output ".artifacts[]?.path | select( . != null )" dist-manifest.json > uploads.txt
+          echo "uploading..."
+          cat uploads.txt
+          gh release upload ${{ github.ref_name }} $(cat uploads.txt)
+          echo "uploaded!" 
+  # Build and packages all the platform-agnostic(ish) things
+  upload-global-artifacts:
+    needs: upload-local-artifacts
+    runs-on: "ubuntu-20.04"
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: print tag
-        run: echo "ok we're publishing!"
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install cargo-dist
+        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+      # Get all the local artifacts for the global tasks to use
+      - name: Fetch local artifacts
+        run: |
+          gh release download ${{ github.ref_name }} target/distrib/
+      - name: Run cargo-dist
+        # This logic is a bit janky because it's trying to be a polyglot between
+        # powershell and bash since this will run on windows, macos, and linux!
+        # The two platforms don't agree on how to talk about env vars but they
+        # do agree on 'cat' and '$()' so we use that to marshal values between commands.
+        run: |
+          cargo dist build --tag=${{ github.ref_name }} --output-format=json "--artifacts=global" > dist-manifest.json
+          echo "dist ran successfully"
+          cat dist-manifest.json
 
+          # Parse out what we just built and upload it to the Github Release™
+          jq --raw-output ".artifacts[]?.path | select( . != null )" dist-manifest.json > uploads.txt
+          echo "uploading..."
+          cat uploads.txt
+          gh release upload ${{ github.ref_name }} $(cat uploads.txt)
+          echo "uploaded!" 
+
+  # Mark the Github Release™ as a non-draft now that everything has succeeded!
   publish-release:
-    # Create a Github Release with all the results once everything is done,
-    # regardless of success. The release is only marked as non-draft if all tasks succeeded.
-    needs: 
-      - get-tag
-      - plan
-      - should-publish
+    # Only run after all the other tasks, but it's ok if upload-artifacts was skipped
+    needs: [create-release, upload-local-artifacts, upload-global-artifacts]
+    if: ${{ always() && needs.create-release.result == 'success' && (needs.upload-local-artifacts.result == 'skipped' || needs.upload-local-artifacts.result == 'success') && (needs.upload-global-artifacts.result == 'skipped' || needs.upload-global-artifacts.result == 'success') }}
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -153,16 +173,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: "Download artifacts"
-        uses: actions/download-artifact@v3
-        with:
-          name: artifacts
-          path: artifacts
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ needs.get-tag.outputs.tag }}
-          name: ${{ fromJson(needs.plan.outputs.val).announcement_title }}
-          body: ${{ fromJson(needs.plan.outputs.val).announcement_github_body }}
-          prerelease: ${{ fromJson(needs.plan.outputs.val).announcement_is_prerelease }}
-          artifacts: "artifacts/*"
+      - name: mark release as non-draft
+        run: |
+          gh release edit ${{ github.ref_name }} --draft=false
