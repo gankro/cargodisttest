@@ -132,8 +132,8 @@ jobs:
         if: ${{ contains(matrix.os, 'windows') }}
         run: |
           cargo install cargo-wix
-          cargo wix init
-          echo "wix is init"
+          # cargo wix init
+          # echo "wix is init"
           cargo wix -o target/distrib/cargodisttest.msi
           echo "wix built"
           # cargo wix sign -i target/distrib/cargodisttest.msi
