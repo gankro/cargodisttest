@@ -128,6 +128,13 @@ jobs:
           cat uploads.txt
           gh release upload ${{ github.ref_name }} $(cat uploads.txt)
           echo "uploaded!"
+      - name: Run Wix
+        if: ${{ contains(matrix.os, 'windows') }}
+        run: |
+          cargo install cargo-wix
+          cargo wix init
+          cargo wix
+
   # Build and packages all the platform-agnostic(ish) things
   upload-global-artifacts:
     needs: upload-local-artifacts
