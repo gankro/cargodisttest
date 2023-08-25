@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       has-releases: ${{ steps.create-release.outputs.has-releases }}
+      releases: ${{ steps.create-release.outputs.releases }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -57,12 +58,19 @@ jobs:
         with:
           submodules: recursive
       - name: Install cargo-dist
-        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.sh | sh"
       - id: create-release
         run: |
           cargo dist plan --tag=${{ github.ref_name }} --output-format=json > dist-manifest.json
           echo "dist plan ran successfully"
           cat dist-manifest.json
+
+          # Create the Github Release™ based on what cargo-dist thinks it should be
+          ANNOUNCEMENT_TITLE=$(jq --raw-output ".announcement_title" dist-manifest.json)
+          IS_PRERELEASE=$(jq --raw-output ".announcement_is_prerelease" dist-manifest.json)
+          jq --raw-output ".announcement_github_body" dist-manifest.json > new_dist_announcement.md
+          gh release create ${{ github.ref_name }} --draft --prerelease="$IS_PRERELEASE" --title="$ANNOUNCEMENT_TITLE" --notes-file=new_dist_announcement.md
+          echo "created announcement!"
 
           # Upload the manifest to the Github Release™
           gh release upload ${{ github.ref_name }} dist-manifest.json
@@ -71,6 +79,7 @@ jobs:
           # Disable all the upload-artifacts tasks if we have no actual releases
           HAS_RELEASES=$(jq --raw-output ".releases != null" dist-manifest.json)
           echo "has-releases=$HAS_RELEASES" >> "$GITHUB_OUTPUT"
+          echo "releases=$(jq --compact-output ".releases" dist-manifest.json)" >> "$GITHUB_OUTPUT"
 
   # Build and packages all the platform-specific things
   upload-local-artifacts:
@@ -84,17 +93,16 @@ jobs:
         include:
         - os: "macos-11"
           dist-args: "--artifacts=local --target=aarch64-apple-darwin"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.sh | sh"
         - os: "macos-11"
           dist-args: "--artifacts=local --target=x86_64-apple-darwin"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.sh | sh"
         - os: "windows-2019"
           dist-args: "--artifacts=local --target=x86_64-pc-windows-msvc"
-          install-dist: "irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.ps1 | iex"
+          install-dist: "irm  https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.ps1 | iex"
         - os: "ubuntu-20.04"
           dist-args: "--artifacts=local --target=x86_64-unknown-linux-gnu"
-          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
-
+          install-dist: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.sh | sh"
     runs-on: ${{ matrix.os }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -121,18 +129,6 @@ jobs:
           cat uploads.txt
           gh release upload ${{ github.ref_name }} $(cat uploads.txt)
           echo "uploaded!"
-      - name: Run Wix
-        if: ${{ contains(matrix.os, 'windows') }}
-        run: |
-          cargo install cargo-wix
-          # cargo wix init
-          # echo "wix is init"
-          cargo wix -o target/distrib/cargodisttest.msi
-          echo "wix built"
-          # cargo wix sign -i target/distrib/cargodisttest.msi
-          echo "uploading..."
-          gh release upload ${{ github.ref_name }} target/distrib/cargodisttest.msi
-          echo "uploaded!"
 
   # Build and packages all the platform-agnostic(ish) things
   upload-global-artifacts:
@@ -145,8 +141,8 @@ jobs:
         with:
           submodules: recursive
       - name: Install cargo-dist
-        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.1/cargo-dist-installer.sh | sh"
-      # Get all the local artifacts for the global tasks to use
+        run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/cargo-dist/releases/download/v0.2.0-prerelease.5/cargo-dist-installer.sh | sh"
+      # Get all the local artifacts for the global tasks to use (for e.g. checksums)
       - name: Fetch local artifacts
         run: |
           gh release download ${{ github.ref_name }} --dir target/distrib/
