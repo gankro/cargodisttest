@@ -35,4 +35,5 @@ unix-archive = ".tar.gz"
 targets = ["x86_64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-pc-windows-msvc", "aarch64-apple-darwin"]
 # A namespace to use when publishing this package to the npm registry
 npm-scope = "@axodotdev"
-
+# Assume whenever a tag is pushed, a Draft Release with the desired name/tag/body exists
+edit-existing = true
