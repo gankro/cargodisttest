@@ -4,18 +4,12 @@
 # CI that:
 #
 # * checks for a Git Tag that looks like a release
-# * creates a draft Github Release™ and fills in its text
 # * builds artifacts with cargo-dist (executable-zips, installers, hashes)
 # * uploads those artifacts to the Github Release™
 # * undrafts the Github Release™ on success
 #
-# Note that the Github Release™ will be created before the artifacts,
-# so there will be a few minutes where the release has no artifacts
-# and then they will slowly trickle in, possibly failing. To make
-# this more pleasant we mark the release as a "draft" until all
-# artifacts have been successfully uploaded. This allows you to
-# choose what to do with partial successes and avoids spamming
-# anyone with notifications before the release is actually ready.
+# Note that a Github Release™ with this tag is assumed to exist as a draft
+# with the appropriate title/body, and will be undrafted for you.
 name: Release
 
 permissions:
@@ -49,7 +43,6 @@ on:
 
 jobs:
   # Run 'cargo dist plan' to determine what tasks we need to do
-  # and create a draft github release with the computed title/body
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -69,12 +62,7 @@ jobs:
           echo "dist plan ran successfully"
           cat dist-manifest.json
 
-          # Create the Github Release™ based on what cargo-dist thinks it should be
-          ANNOUNCEMENT_TITLE=$(jq --raw-output ".announcement_title" dist-manifest.json)
-          IS_PRERELEASE=$(jq --raw-output ".announcement_is_prerelease" dist-manifest.json)
-          jq --raw-output ".announcement_github_body" dist-manifest.json > new_dist_announcement.md
-          gh release create ${{ github.ref_name }} --draft --prerelease="$IS_PRERELEASE" --title="$ANNOUNCEMENT_TITLE" --notes-file=new_dist_announcement.md
-          echo "created announcement!"
+          # We're assuming a draft Github Release™ with the desired title/tag/body already exists
 
           # Upload the manifest to the Github Release™
           gh release upload ${{ github.ref_name }} dist-manifest.json
