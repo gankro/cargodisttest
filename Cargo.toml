@@ -7,6 +7,10 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/oranda-gallery/cargodisttest"
 authors = ["axodotdev"]
 
+[package.metadata.wix]
+upgrade-guid = "B60E2E86-9991-49B0-BEAA-7E6D3E7F2A09"
+path-guid = "C151419B-4780-40DC-994F-BFB032016C01"
+
 [dependencies]
 clap = { version = "4.1.4", features = ["derive"] }
 unicode-width = "0.1.10"
@@ -22,11 +26,11 @@ lto = "thin"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.2.0-github-generate-for-workgroups"
+cargo-dist-version = "0.3.0-prerelease.4"
 # CI backends to support (see 'cargo dist generate-ci')
 ci = ["github"]
 # The installers to generate for each app
-installers = ["shell", "powershell", "npm", "homebrew"]
+installers = ["shell", "powershell", "npm", "homebrew", "msi"]
 # The archive format to use for windows builds (defaults .zip)
 windows-archive = ".tar.gz"
 # The archive format to use for non-windows builds (defaults .tar.xz)
@@ -38,4 +42,6 @@ npm-scope = "@axodotdev"
 # Whether cargo-dist should create a Github Release or use an existing draft
 create-release = false
 # Publish jobs to run in CI
-pr-run-mode = "plan"
+pr-run-mode = "upload"
+# Skip checking whether the specified configuration files are up to date
+allow-dirty = ["ci"]
