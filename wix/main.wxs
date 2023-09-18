@@ -173,7 +173,7 @@
         <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
         <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
-        <Property Id='ARPHELPLINK' Value='https://github.com/oranda-gallery/cargodisttest'/>
+        <Property Id='ARPHELPLINK' Value='https://github.com/Gankra/cargodisttest'/>
         
         <UI>
             <UIRef Id='WixUI_FeatureTree'/>
