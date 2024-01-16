@@ -42,7 +42,8 @@ on:
     inputs:
       tag:
         description: 'Release Tag'
-        required: false
+        required: true
+        default: 'dry-run'
         type: string
   pull_request:
 
@@ -52,9 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
-      tag: ${{ inputs.tag || '' }}
-      tag-flag: ${{ inputs.tag && format('--tag={0}', inputs.tag) || '' }}
-      publishing: ${{ !!inputs.tag }}
+      tag: ${{ (inputs.tag != 'dry-run' && inputs.tag) || '' }}
+      tag-flag: ${{ inputs.tag && inputs.tag != 'dry-run' && format('--tag={0}', inputs.tag) || '' }}
+      publishing: ${{ inputs.tag && inputs.tag != 'dry-run' }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -73,7 +74,7 @@ jobs:
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
         run: |
-          cargo dist ${{ inputs.tag && format('host --steps=create --tag={0}', inputs.tag) || (github.event.pull_request.head.repo.fork && 'plan' || 'host --steps=check') }} --output-format=json > dist-manifest.json
+          cargo dist ${{ inputs.tag && inputs.tag != 'dry-run' && format('host --steps=create --tag={0}', inputs.tag) || (github.event.pull_request.head.repo.fork && 'plan' || 'host --steps=check') }} --output-format=json > dist-manifest.json
           echo "cargo dist ran successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
@@ -86,7 +87,7 @@ jobs:
   custom-local-build-maturin:
     needs:
       - plan
-    if: ${{ needs.plan.outputs.publishing == 'true' || fromJson(needs.plan.outputs.val).ci.github.pr_run_mode == 'upload' }}
+    if: ${{ needs.plan.outputs.publishing == 'true' || fromJson(needs.plan.outputs.val).ci.github.pr_run_mode == 'upload' || inputs.tag == 'dry-run' }}
     uses: ./.github/workflows/local-build-maturin.yml
     with:
       plan: ${{ needs.plan.outputs.val }}
