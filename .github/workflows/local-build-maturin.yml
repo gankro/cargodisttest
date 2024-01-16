@@ -9,11 +9,6 @@ on:
 
 jobs:
   build-local:
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
-      PLAN: ${{ inputs.plan }}
     strategy:
       fail-fast: false
       # Target platforms/runners are computed by cargo-dist in create-release.
@@ -28,7 +23,10 @@ jobs:
       # - N "local" tasks that build each platform's binaries and platform-specific installers
       matrix: ${{ fromJson(inputs.plan).ci.github.artifacts_matrix }}
     runs-on: ${{ matrix.runner }}
-
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
+      PLAN: ${{ inputs.plan }}
     steps:
       - uses: actions/checkout@v4
         with:
