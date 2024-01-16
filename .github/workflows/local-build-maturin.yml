@@ -1,4 +1,4 @@
-name: Greeter
+name: Release Builds
 
 on:
   workflow_call:
@@ -14,7 +14,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
       PLAN: ${{ inputs.plan }}
-     strategy:
+    strategy:
       fail-fast: false
       # Target platforms/runners are computed by cargo-dist in create-release.
       # Each member of the matrix has the following arguments:
