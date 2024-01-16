@@ -47,3 +47,5 @@ create-release = false
 pr-run-mode = "plan"
 # Whether CI should trigger releases with dispatches instead of tag pushes
 dispatch-releases = true
+# Skip checking whether the specified configuration files are up to date
+allow-dirty = ["ci"]

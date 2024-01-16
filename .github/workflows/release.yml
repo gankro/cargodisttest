@@ -53,7 +53,7 @@ jobs:
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
       tag: ${{ inputs.tag || '' }}
-      tag-flag: ${{ inputs.tag && format('--tag={0}', inputs.tag)) || '' }}
+      tag-flag: ${{ inputs.tag && format('--tag={0}', inputs.tag) || '' }}
       publishing: ${{ !!inputs.tag }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,7 +73,7 @@ jobs:
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
         run: |
-          cargo dist ${{ input.tag && format('host --steps=create --tag={0}', input.tag) || (github.event.pull_request.head.repo.fork && 'plan' || 'host --steps=check') }} --output-format=json > dist-manifest.json
+          cargo dist ${{ inputs.tag && format('host --steps=create --tag={0}', inputs.tag) || (github.event.pull_request.head.repo.fork && 'plan' || 'host --steps=check') }} --output-format=json > dist-manifest.json
           echo "cargo dist ran successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
