@@ -45,4 +45,5 @@ npm-scope = "@axodotdev"
 create-release = false
 # Publish jobs to run in CI
 pr-run-mode = "plan"
-
+# Whether CI should trigger releases with dispatches instead of tag pushes
+dispatch-releases = true
