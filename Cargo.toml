@@ -28,7 +28,7 @@ lto = "thin"
 # Config for 'cargo dist'
 [workspace.metadata.dist]
 # The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.7.2"
+cargo-dist-version = "0.10.0-prerelease.2"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
@@ -38,18 +38,14 @@ windows-archive = ".tar.gz"
 # The archive format to use for non-windows builds (defaults .tar.xz)
 unix-archive = ".tar.gz"
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # A namespace to use when publishing this package to the npm registry
 npm-scope = "@axodotdev"
 # Whether cargo-dist should create a Github Release or use an existing draft
 create-release = false
 # Publish jobs to run in CI
 pr-run-mode = "plan"
-# Whether CI should trigger releases with dispatches instead of tag pushes
-dispatch-releases = true
-# Whether CI should include auto-generated code to build local artifacts
-build-local-artifacts = false
-# Local artifacts jobs to run in CI
-local-artifacts-jobs = ["./local-build-maturin"]
-# Skip checking whether the specified configuration files are up to date
-allow-dirty = ["ci"]
+# A prefix git tags must include for cargo-dist to care about them
+tag-namespace = "owo"
+# Where to host releases
+hosting = ["axodotdev", "github"]
