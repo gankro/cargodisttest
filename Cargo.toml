@@ -48,4 +48,4 @@ pr-run-mode = "plan"
 # A prefix git tags must include for cargo-dist to care about them
 tag-namespace = "owo"
 # Where to host releases
-hosting = ["axodotdev", "github"]
+hosting = ["axodotdev"]
