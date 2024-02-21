@@ -1,3 +1,10 @@
+# Version 0.4.8 (2024-02-21)
+
+☠️ THIS VERSION HAS A VERY-COMPLEX TAG ☠️
+
+It contains a slash, and needs to be slugified!
+
+
 # Version 0.4.7 (2024-02-21)
 
 THIS VERSION HAS A MEDIUM-COMPLEX TAG
