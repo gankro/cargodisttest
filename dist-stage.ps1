@@ -10,10 +10,10 @@ irm https://github.com/axodotdev/cargo-dist/releases/latest/download/cargo-dist-
 
 # run cargo-dist as lies
 echo "reconfiguring to push to axo staging"
-cargo dist init -y --hosting=axodotdev --tag=releases/cargodisttest-0.4.8
+cargo dist init -y --hosting=axodotdev --tag=cooltag/cargodisttest-0.4.9
 echo "building + releasing to staging"
-cargo dist host --steps=create --tag=releases/cargodisttest-0.4.8
-cargo dist build --artifacts=lies --tag=releases/cargodisttest-0.4.7
-cargo dist host --steps=upload --steps=release --steps=announce --tag=releases/cargodisttest-0.4.8
+cargo dist host --steps=create --tag=cooltag/cargodisttest-0.4.9
+cargo dist build --artifacts=lies --tag=cooltag/cargodisttest-0.4.9
+cargo dist host --steps=upload --steps=release --steps=announce --tag=cooltag/cargodisttest-0.4.9
 
 echo "done! (you might want to git clean/stash the changes we just made)"

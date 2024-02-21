@@ -1,3 +1,12 @@
+# Version 0.4.9 (2024-02-21)
+
+☠️ THIS VERSION HAS A VERY-COMPLEX TAG ☠️
+
+It contains a slash, and needs to be slugified!
+
+(the last one might have been corrupt???)
+
+
 # Version 0.4.8 (2024-02-21)
 
 ☠️ THIS VERSION HAS A VERY-COMPLEX TAG ☠️
