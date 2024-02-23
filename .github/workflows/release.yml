@@ -252,7 +252,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: "Gankra/test-tap"
+          repository: "Gankra/homebrew-testtap"
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
       # So we have access to the formula
       - name: Fetch local artifacts

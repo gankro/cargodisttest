@@ -44,7 +44,7 @@ npm-scope = "@axodotdev"
 # Customize the Homebrew formula name
 formula = "cargodisttest-custom"
 # A GitHub repo to push Homebrew formulas to
-tap = "Gankra/test-tap"
+tap = "Gankra/homebrew-testtap"
 # Publish jobs to run in CI
 pr-run-mode = "plan"
 # Where to host releases
