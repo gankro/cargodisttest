@@ -1,3 +1,7 @@
+# Version 0.5.0 (2024-02-23)
+
+Custom homebrew formula name?
+
 # Version 0.4.10 (2024-02-21)
 
 I have so many prereleases!!!
