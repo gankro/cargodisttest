@@ -1,3 +1,7 @@
+# Version 0.6.0 (2024-02-29)
+
+are releases working!?
+
 # Version 0.5.0 (2024-02-23)
 
 Custom homebrew formula name?
