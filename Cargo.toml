@@ -1,7 +1,7 @@
 [package]
 name = "cargodisttest"
 description = "💬 a CLI for learning to distribute CLIs in rust"
-version = "0.9.9"
+version = "0.9.10"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Gankro/cargodisttest"
@@ -32,7 +32,7 @@ cargo-dist-version = "0.12.0"
 # CI backends to support
 ci = ["github"]
 # The installers to generate for each app
-installers = ["shell", "powershell", "npm", "homebrew", "msi"]
+installers = ["shell", "powershell", "npm", "msi"]
 # The archive format to use for windows builds (defaults .zip)
 windows-archive = ".tar.gz"
 # The archive format to use for non-windows builds (defaults .tar.xz)
@@ -41,10 +41,6 @@ unix-archive = ".tar.gz"
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # A namespace to use when publishing this package to the npm registry
 npm-scope = "@axodotdev"
-# Customize the Homebrew formula name
-formula = "cargodisttest-custom"
-# A GitHub repo to push Homebrew formulas to
-tap = "Gankra/homebrew-testtap"
 # Publish jobs to run in CI
 pr-run-mode = "plan"
 # Where to host releases
